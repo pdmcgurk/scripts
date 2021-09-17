@@ -1,6 +1,7 @@
 from functools import cmp_to_key, partial
 from os import name, system
 from random import randint
+from re import compile as compile_regex
 
 INITIATIVE_DIE_SIZE = 10
 
@@ -23,7 +24,7 @@ party = [
   ("Vorbith", 2)
 ]
 
-
+HP_PATTERN = compile_regex(r'(?P<hp>\d+)(\/(?P<max_hp>\d+))?')
 
 def clear():
   # for windows
@@ -43,9 +44,16 @@ class Encounter:
 
   def __init__(self, party):
     self.party = party
-    self.monsters = self.add_monsters()
     self.pcs = self.roll_pcs()
+    self.monsters = self.add_monsters()
     self.combatants = self.pcs + self.monsters
+
+  def roll_pcs(self):
+    return [Combatant(
+      pc[0],
+      self.roll_initiative(pc[1]),
+      self.get_hit_points(pc[0])
+    ) for pc in self.party]
 
   def add_monsters(self):
     monsters = []
@@ -60,8 +68,38 @@ class Encounter:
     return monsters
 
   def add_monster(self, monster_name):
-    monsters = []
+    names = self.get_multiple_names(monster_name)
+    initiative_bonus = self.get_initiative_bonus(monster_name)
+    hit_points = self.get_hit_points(monster_name)
+    return [Combatant(
+      n,
+      self.roll_initiative(initiative_bonus),
+      hit_points
+    ) for n in names]
 
+  def roll_initiative(self, initiative_bonus):
+    return randint(1, INITIATIVE_DIE_SIZE) + initiative_bonus
+
+  def get_hit_points(self, combatant_name):
+    while True:
+      hp = input("(Optional) Enter hit points for %s (y or x/y): " % combatant_name)
+      if hp == '':
+        return (0, 0)
+      else:
+        m = HP_PATTERN.match(hp)
+        if m:
+          if m.group("max_hp"):
+            return (int(m.group("hp")), int(m.group("max_hp")))
+          return (int(m.group("hp")), int(m.group("hp")))
+      print("Enter a number for maximum HP, or a ratio like 17/38")
+
+  def get_multiple_names(self, monster_name):
+    monster_number = self.get_number(monster_name)
+    if monster_number == 1:
+      return [monster_name]
+    return ["%s (%s)" % (monster_name, COLORS[i]) for i in range(monster_number)]
+
+  def get_number(self, monster_name):
     monster_number = 0
     while 1 > monster_number or monster_number > len(COLORS):
       try:
@@ -70,31 +108,17 @@ class Encounter:
           print("Come on, switch it up")
       except:
         print("Try again")
+    return monster_number
 
-    monster_initiative = None
-    while monster_initiative == None:
+  def get_initiative_bonus(self, monster_name):
+    initiative_bonus = None
+    while initiative_bonus == None:
       try:
-        monster_initiative = int(input("Enter initiative bonus for %s: " % monster_name))
+        initiative_bonus = int(input("Enter initiative bonus for %s: " % monster_name))
       except:
         print("Try again")
+    return initiative_bonus
 
-    if monster_number > 1:
-      for i in range(monster_number):
-        name_with_color = "%s (%s)" % (monster_name, COLORS[i])
-        monsters.append(Combatant(name_with_color, self.roll_initiative(monster_initiative)))
-    else:
-      monsters.append(Combatant(monster_name, self.roll_initiative(monster_initiative)))
-
-    return monsters
-
-  def roll_initiative(self, initiative_bonus):
-    return randint(1, INITIATIVE_DIE_SIZE) + initiative_bonus
-
-  def roll_pcs(self):
-    pcs = []
-    for pc in self.party:
-      pcs.append(Combatant(pc[0], self.roll_initiative(pc[1])))
-    return pcs
 
 class EncounterPlayer:
 
@@ -139,7 +163,7 @@ class EncounterPlayer:
     while callback == None:
       option = input("Select number to take turn, (s)kip to next turn, or (q)uit: ")
       callback = switcher.get(option)
-      
+
     return callback()
 
   def false(self):
@@ -158,14 +182,20 @@ class EncounterPlayer:
       print("\N{CHECK MARK} %s" % combatant.name)
     print('')
     for i in range(len(self.ordered)):
-      print("%d. %s" % (i + 1, self.ordered[i].name))
+      print("%d. %s (%d/%d)" % (
+        i + 1,
+        self.ordered[i].name,
+        self.ordered[i].hit_points[0],
+        self.ordered[i].hit_points[1]
+      ))
 
 
 class Combatant:
 
-  def __init__(self, name, initiative):
+  def __init__(self, name, initiative, hit_points):
       self.name = name
       self.initiative = initiative
+      self.hit_points = hit_points
 
 
 class OptionSwitcher:
