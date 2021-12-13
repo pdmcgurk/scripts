@@ -125,46 +125,56 @@ class EncounterPlayer:
   def __init__(self, encounter):
     self.encounter = encounter
     self.keep_playing = True
-    self.acted = []
-    self.ordered = []
+    # self.sort = self.sort_by_initiative
+    # or
+    self.sort = self.sort_by_side
 
   def play(self):
-    # NOTE: self.sort_by_side displays PCs followed by monsters rather than inititive order.
+    # NOTE: self.sort_by_side displays PCs followed by monsters rather than initiative order.
     # To play with traditional initiative rules, replace it with self.sort_by_initiative.
-    self.ordered = self.sort_by_initiative()
+    self.active = self.encounter.combatants.copy()
+    self.ordered = self.sort_by_initiative(self.active)
+    self.acted = []
     while self.keep_playing:
       while self.keep_playing and self.ordered != []:
         self.keep_playing = self.turn_prompt()
       self.acted = []
-      self.ordered = self.sort_by_side()
+      self.ordered = self.sort(self.active)
     return
 
-  def sort_by_initiative(self):
-    return sorted(self.encounter.combatants, key=cmp_to_key(self.initiative_comparator))
+  def sort_by_side(self, combatants):
+    return combatants.copy()
+
+  def sort_by_initiative(self, combatants):
+    return sorted(combatants, key=cmp_to_key(self.initiative_comparator))
 
   def initiative_comparator(self, combatant1, combatant2):
     if combatant1.initiative > combatant2.initiative:
       return -1
     return 1
 
-  def sort_by_side(self):
-    return self.encounter.combatants.copy()
-
   def turn_prompt(self):
     base_cases = {
       "q": lambda: self.false(),
-      "s": lambda: self.empty_ordered()
+      "s": lambda: self.empty_ordered(),
+      "d": lambda: self.damage_prompt()
     }
     switcher = OptionSwitcher(len(self.ordered), self.take_turn, base_cases)
 
     clear()
-    self.print_options()
+    self.print_main_menu()
     callback = None
     while callback == None:
-      option = input("Select number to take turn, (s)kip to next turn, or (q)uit: ")
+      option = input(
+         "Select a number to take turn, or " +
+         "apply (d)amage or (h)ealing, (s)kip to next turn, or (q)uit: "
+      )
       callback = switcher.get(option)
 
     return callback()
+
+  def true(self):
+    return True
 
   def false(self):
     return False
@@ -173,11 +183,26 @@ class EncounterPlayer:
     self.ordered = []
     return True
 
+  def damage_prompt(self):
+    base_cases = {
+      "b": lambda: self.true()
+    }
+    switcher = OptionSwitcher(len(self.active), self.apply_damage, base_cases)
+
+    clear()
+    self.print_damage_menu()
+    callback = None
+    while callback == None:
+      option = input("Select a number to damage combatant, or go (b)ack: ")
+      callback = switcher.get(option)
+
+    return callback()
+
   def take_turn(self, index):
     self.acted.append(self.ordered.pop(index))
     return True
 
-  def print_options(self):
+  def print_main_menu(self):
     for combatant in self.acted:
       print("\N{CHECK MARK} %s" % combatant.name)
     print('')
@@ -188,7 +213,39 @@ class EncounterPlayer:
         self.ordered[i].hit_points[0],
         self.ordered[i].hit_points[1]
       ))
+    print('')
+    for combatant in self.encounter.combatants:
+      if combatant.hit_points[0] == 0 and combatant.hit_points[1] > 0:
+        print("\N{CROSS MARK} %s" % combatant.name)
 
+  def apply_damage(self, index):
+    combatant = self.active[index]
+    damage = -1
+    while damage < 0:
+      try:
+        damage = int(input("How much damage to %s?: " % combatant.name))
+        if damage > -1:
+          break
+      except:
+        pass
+      print("Try again")
+    new_hp = combatant.hit_points[0] - damage
+    if combatant.hit_points[1] != 0:
+      new_hp = max(0, new_hp)
+    combatant.hit_points = (new_hp, combatant.hit_points[1])
+    if new_hp == 0:
+      self.active.pop(index)
+      self.ordered = [c for c in self.ordered if c.name != combatant.name]
+    return True
+
+  def print_damage_menu(self):
+    for i in range(len(self.active)):
+      print("%d. %s (%d/%d)" % (
+        i + 1,
+        self.active[i].name,
+        self.active[i].hit_points[0],
+        self.active[i].hit_points[1]
+      ))
 
 class Combatant:
 
