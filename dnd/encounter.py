@@ -157,7 +157,8 @@ class EncounterPlayer:
     base_cases = {
       "q": lambda: self.false(),
       "s": lambda: self.empty_ordered(),
-      "d": lambda: self.damage_prompt()
+      "d": lambda: self.damage_prompt(),
+      "h": lambda: self.heal_prompt()
     }
     switcher = OptionSwitcher(len(self.ordered), self.take_turn, base_cases)
 
@@ -194,6 +195,21 @@ class EncounterPlayer:
     callback = None
     while callback == None:
       option = input("Select a number to damage combatant, or go (b)ack: ")
+      callback = switcher.get(option)
+
+    return callback()
+
+  def heal_prompt(self):
+    base_cases = {
+      "b": lambda: self.true()
+    }
+    switcher = OptionSwitcher(len(self.encounter.combatants), self.apply_healing, base_cases)
+
+    clear()
+    self.print_healing_menu()
+    callback = None
+    while callback == None:
+      option = input("Select a number to heal combatant, or go (b)ack: ")
       callback = switcher.get(option)
 
     return callback()
@@ -245,6 +261,31 @@ class EncounterPlayer:
         self.active[i].name,
         self.active[i].hit_points[0],
         self.active[i].hit_points[1]
+      ))
+
+  def apply_healing(self, index):
+    combatant = self.encounter.combatants[index]
+    healing = -1
+    while healing < 0:
+      try:
+        healing = int(input("How many hit points to restore to %s?: " % combatant.name))
+        if healing > -1:
+          break
+      except:
+        pass
+      print("Try again")
+    new_hp = min(combatant.hit_points[0] + healing, combatant.hit_points[1])
+    combatant.hit_points = (new_hp, combatant.hit_points[1])
+    self.active = [c for c in self.encounter.combatants if c.hit_points[0] > 0 or c.hit_points[1] == 0]
+    return True
+
+  def print_healing_menu(self):
+    for i in range(len(self.encounter.combatants)):
+      print("%d. %s (%d/%d)" % (
+        i + 1,
+        self.encounter.combatants[i].name,
+        self.encounter.combatants[i].hit_points[0],
+        self.encounter.combatants[i].hit_points[1]
       ))
 
 class Combatant:
