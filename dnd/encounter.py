@@ -39,6 +39,7 @@ def clear():
 
 
 def main():
+    clear()
     encounter = Encounter(PARTY)
     EncounterPlayer(encounter).play()
     return
@@ -171,7 +172,8 @@ class EncounterPlayer:
             "q": lambda: self.false(),
             "s": lambda: self.empty_ordered(),
             "d": lambda: self.damage_prompt(),
-            "h": lambda: self.heal_prompt()
+            "h": lambda: self.heal_prompt(),
+            "a": lambda: self.add_effect_prompt()
         }
         callback_map = CallbackMap(range(len(self.ordered)), self.take_turn, base_cases)
 
@@ -181,7 +183,8 @@ class EncounterPlayer:
         while callback is None:
             option = input(
                 "Select a number to take turn, or " +
-                "apply (d)amage or (h)ealing, (s)kip to next turn, or (q)uit: "
+                "apply (d)amage or (h)ealing, (a)dd or (r)emove effects, " +
+                "(s)kip to next turn, or (q)uit: "
             )
             callback = callback_map.get(option)
 
@@ -228,6 +231,49 @@ class EncounterPlayer:
             callback = callback_map.get(option)
 
         return callback()
+
+    def add_effect_prompt(self):
+        base_cases = {
+            "b": lambda: self.true()
+        }
+
+        clear()
+        effect_name = ''
+        while effect_name == '':
+            effect_name = input("Enter name for effect, or go (b)ack: ")
+        if effect_name == 'b':
+            return True
+        effect_turns = 0
+        while effect_turns == 0:
+            turns_input = input(f"How many turns will {effect_name} last? (Leave blank for ongoing): ")
+            if turns_input == '':
+                effect_turns = None
+                break
+            try:
+                effect_turns = int(turns_input)
+            except Exception:
+                print("Try again")
+
+        callback_map = CallbackMap(self.encounter.combatants,
+                                   self.add_effect,
+                                   base_cases,
+                                   **dict(effect_name=effect_name, effect_turns=effect_turns))
+
+        self.print_all_combatants_menu()
+        callbacks = None
+        while callbacks is None:
+            combatant_input = input(
+                f"Select a number or comma-separated numbers for combatants to receive {effect_name}: ")
+            try:
+                callbacks = filter(lambda y: y is not None,
+                                   [callback_map.get(x) for x in combatant_input.split(',')])
+            except Exception:
+                print("Try again")
+
+        success = True
+        for callback in callbacks:
+            success = callback() and success
+        return success
 
     def take_turn(self, index):
         self.acted.append(self.ordered.pop(index))
@@ -286,6 +332,11 @@ class EncounterPlayer:
         for i in range(len(self.encounter.combatants)):
             print(f"{i + 1}. {self.encounter.combatants[i]}")
 
+    @staticmethod
+    def add_effect(combatant, effect_name, effect_turns):
+        combatant.add_effect(Effect(effect_name, effect_turns))
+        return True
+
 
 class Combatant:
 
@@ -293,10 +344,29 @@ class Combatant:
         self.name = name
         self.initiative = initiative
         self.hit_points = hit_points
+        self.effects = dict()
+
+    def add_effect(self, effect):
+        self.effects[effect.name] = effect
 
     def __str__(self):
         s = f"{self.name} ({self.hit_points[0]}/{self.hit_points[1]})"
+        effects = self.effects.values()
+        if len(effects) > 0:
+            s += f"[{', '.join([str(e) for e in effects])}]"
         return s
+
+
+class Effect:
+
+    def __init__(self, name, turns):
+        self.name = name
+        self.turns = turns
+
+    def __str__(self):
+        if self.turns is not None:
+            return f"{self.name} ({self.turns})"
+        return self.name
 
 
 class CallbackMap:
