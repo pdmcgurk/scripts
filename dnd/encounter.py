@@ -88,7 +88,7 @@ class Encounter:
     @staticmethod
     def get_hit_points(combatant_name):
         while True:
-            hp = input("(Optional) Enter hit points for %s (y or x/y): " % combatant_name)
+            hp = input(f"(Optional) Enter hit points for {combatant_name} (y or x/y): ")
             if hp == '':
                 return 0, 0
             else:
@@ -103,14 +103,14 @@ class Encounter:
         monster_number = self.get_number(monster_name)
         if monster_number == 1:
             return [monster_name]
-        return ["%s (%s)" % (monster_name, COLORS[i]) for i in range(monster_number)]
+        return [f"{monster_name}, COLORS[{i}]" for i in range(monster_number)]
 
     @staticmethod
     def get_number(monster_name):
         monster_number = 0
         while 1 > monster_number or monster_number > len(COLORS):
             try:
-                monster_number = int(input("How many %s?: " % monster_name))
+                monster_number = int(input(f"How many {monster_name}?: "))
                 if monster_number > len(COLORS):
                     print("Come on, switch it up")
             except Exception:
@@ -122,7 +122,7 @@ class Encounter:
         initiative_bonus = None
         while initiative_bonus is None:
             try:
-                initiative_bonus = int(input("Enter initiative bonus for %s: " % monster_name))
+                initiative_bonus = int(input(f"Enter initiative bonus for {monster_name}: "))
             except Exception:
                 print("Try again")
         return initiative_bonus
@@ -221,7 +221,7 @@ class EncounterPlayer:
         switcher = OptionSwitcher(len(self.encounter.combatants), self.apply_healing, base_cases)
 
         clear()
-        self.print_healing_menu()
+        self.print_all_combatants_menu()
         callback = None
         while callback is None:
             option = input("Select a number to heal combatant, or go (b)ack: ")
@@ -235,26 +235,21 @@ class EncounterPlayer:
 
     def print_main_menu(self):
         for combatant in self.acted:
-            print("\N{CHECK MARK} %s" % combatant.name)
+            print(f"\N{CHECK MARK} {combatant}")
         print('')
         for i in range(len(self.ordered)):
-            print("%d. %s (%d/%d)" % (
-                i + 1,
-                self.ordered[i].name,
-                self.ordered[i].hit_points[0],
-                self.ordered[i].hit_points[1]
-            ))
+            print(f"{i + 1}. {self.ordered[i]}")
         print('')
         for combatant in self.encounter.combatants:
             if combatant.hit_points[0] == 0 and combatant.hit_points[1] > 0:
-                print("\N{CROSS MARK} %s" % combatant.name)
+                print(f"\N{CROSS MARK} {combatant}")
 
     def apply_damage(self, index):
         combatant = self.active[index]
         damage = -1
         while damage < 0:
             try:
-                damage = int(input("How much damage to %s?: " % combatant.name))
+                damage = int(input(f"How much damage to {combatant.name}?: "))
                 if damage > -1:
                     break
             except Exception:
@@ -271,19 +266,14 @@ class EncounterPlayer:
 
     def print_damage_menu(self):
         for i in range(len(self.active)):
-            print("%d. %s (%d/%d)" % (
-                i + 1,
-                self.active[i].name,
-                self.active[i].hit_points[0],
-                self.active[i].hit_points[1]
-            ))
+            print(f"{i + 1}. {self.active[i]}")
 
     def apply_healing(self, index):
         combatant = self.encounter.combatants[index]
         healing = -1
         while healing < 0:
             try:
-                healing = int(input("How many hit points to restore to %s?: " % combatant.name))
+                healing = int(input(f"How many hit points to restore to {combatant.name}?: "))
                 if healing > -1:
                     break
             except Exception:
@@ -294,14 +284,9 @@ class EncounterPlayer:
         self.active = [c for c in self.encounter.combatants if c.hit_points[0] > 0 or c.hit_points[1] == 0]
         return True
 
-    def print_healing_menu(self):
+    def print_all_combatants_menu(self):
         for i in range(len(self.encounter.combatants)):
-            print("%d. %s (%d/%d)" % (
-                i + 1,
-                self.encounter.combatants[i].name,
-                self.encounter.combatants[i].hit_points[0],
-                self.encounter.combatants[i].hit_points[1]
-            ))
+            print(f"{i + 1}. {self.encounter.combatants[i]}")
 
 
 class Combatant:
@@ -310,6 +295,10 @@ class Combatant:
         self.name = name
         self.initiative = initiative
         self.hit_points = hit_points
+
+    def __str__(self):
+        s = f"{self.name} ({self.hit_points[0]}/{self.hit_points[1]})"
+        return s
 
 
 class OptionSwitcher:
