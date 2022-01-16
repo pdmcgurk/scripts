@@ -152,6 +152,7 @@ class EncounterPlayer:
                 self.keep_playing = self.turn_prompt()
             self.acted = []
             self.ordered = self.sort(self.active)
+            self.tick_effects()
         return
 
     @staticmethod
@@ -337,6 +338,10 @@ class EncounterPlayer:
         combatant.add_effect(Effect(effect_name, effect_turns))
         return True
 
+    def tick_effects(self):
+        for combatant in self.encounter.combatants:
+            combatant.effects = {name: effect for (name, effect) in combatant.effects.items() if effect.tick()}
+
 
 class Combatant:
 
@@ -362,6 +367,14 @@ class Effect:
     def __init__(self, name, turns):
         self.name = name
         self.turns = turns
+
+    def tick(self):
+        if self.turns is None:
+            return True
+        self.turns -= 1
+        if self.turns > 0:
+            return True
+        return False
 
     def __str__(self):
         if self.turns is not None:
