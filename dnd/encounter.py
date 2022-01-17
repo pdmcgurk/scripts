@@ -320,4 +320,19 @@ class OptionSwitcher:
         return self.cases.get(case, None)
 
 
+class CallbackMap:
+    def __init__(self, options, action, base_cases=None, **kwargs):
+        if base_cases is None:
+            base_cases = dict()
+        if kwargs is None:
+            kwargs = dict()
+        cases = {}
+        for i in range(len(options)):
+            cases[str(i + 1)] = partial(action, options[i], **kwargs)
+        self.cases = {**cases, **base_cases}
+
+    def get(self, case):
+        return self.cases.get(case, None)
+
+
 main()
