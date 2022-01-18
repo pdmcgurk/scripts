@@ -203,14 +203,14 @@ class EncounterPlayer:
         base_cases = {
             "b": lambda: self.true()
         }
-        switcher = OptionSwitcher(len(self.active), self.apply_damage, base_cases)
+        callback_map = CallbackMap(self.active, self.apply_damage, base_cases)
 
         clear()
         self.print_damage_menu()
         callback = None
         while callback is None:
             option = input("Select a number to damage combatant, or go (b)ack: ")
-            callback = switcher.get(option)
+            callback = callback_map.get(option)
 
         return callback()
 
@@ -218,14 +218,14 @@ class EncounterPlayer:
         base_cases = {
             "b": lambda: self.true()
         }
-        switcher = OptionSwitcher(len(self.encounter.combatants), self.apply_healing, base_cases)
+        callback_map = CallbackMap(self.encounter.combatants, self.apply_healing, base_cases)
 
         clear()
         self.print_all_combatants_menu()
         callback = None
         while callback is None:
             option = input("Select a number to heal combatant, or go (b)ack: ")
-            callback = switcher.get(option)
+            callback = callback_map.get(option)
 
         return callback()
 
@@ -244,8 +244,7 @@ class EncounterPlayer:
             if combatant.hit_points[0] == 0 and combatant.hit_points[1] > 0:
                 print(f"\N{CROSS MARK} {combatant}")
 
-    def apply_damage(self, index):
-        combatant = self.active[index]
+    def apply_damage(self, combatant):
         damage = -1
         while damage < 0:
             try:
@@ -268,8 +267,7 @@ class EncounterPlayer:
         for i in range(len(self.active)):
             print(f"{i + 1}. {self.active[i]}")
 
-    def apply_healing(self, index):
-        combatant = self.encounter.combatants[index]
+    def apply_healing(self, combatant):
         healing = -1
         while healing < 0:
             try:
