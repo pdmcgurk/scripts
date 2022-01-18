@@ -173,7 +173,7 @@ class EncounterPlayer:
             "d": lambda: self.damage_prompt(),
             "h": lambda: self.heal_prompt()
         }
-        switcher = OptionSwitcher(len(self.ordered), self.take_turn, base_cases)
+        callback_map = CallbackMap(range(len(self.ordered)), self.take_turn, base_cases)
 
         clear()
         self.print_main_menu()
@@ -183,7 +183,7 @@ class EncounterPlayer:
                 "Select a number to take turn, or " +
                 "apply (d)amage or (h)ealing, (s)kip to next turn, or (q)uit: "
             )
-            callback = switcher.get(option)
+            callback = callback_map.get(option)
 
         return callback()
 
