@@ -259,7 +259,7 @@ class EncounterPlayer:
             new_hp = max(0, new_hp)
         combatant.hit_points = (new_hp, combatant.hit_points[1])
         if new_hp == 0:
-            self.active.pop(index)
+            self.active = [c for c in self.active if c.name != combatant.name]
             self.ordered = [c for c in self.ordered if c.name != combatant.name]
         return True
 
