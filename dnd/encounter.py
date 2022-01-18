@@ -103,7 +103,7 @@ class Encounter:
         monster_number = self.get_number(monster_name)
         if monster_number == 1:
             return [monster_name]
-        return [f"{monster_name}, COLORS[{i}]" for i in range(monster_number)]
+        return [f"{monster_name} ({COLORS[i]})" for i in range(monster_number)]
 
     @staticmethod
     def get_number(monster_name):
