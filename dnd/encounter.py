@@ -174,7 +174,8 @@ class EncounterPlayer:
             "s": lambda: self.empty_ordered(),
             "d": lambda: self.damage_prompt(),
             "h": lambda: self.heal_prompt(),
-            "a": lambda: self.add_effect_prompt()
+            "a": lambda: self.add_effect_prompt(),
+            "r": lambda: self.remove_effect_prompt()
         }
         callback_map = CallbackMap(range(len(self.ordered)), self.take_turn, base_cases)
 
@@ -276,6 +277,35 @@ class EncounterPlayer:
             success = callback() and success
         return success
 
+    def remove_effect_prompt(self):
+        base_cases = {
+            "b": lambda: self.true()
+        }
+
+        effects = []
+        for combatant in self.encounter.combatants:
+            effects += [(combatant, effect_name) for effect_name in combatant.effects.keys()]
+        callback_map = CallbackMap(effects,
+                                   self.remove_effect,
+                                   base_cases)
+
+        clear()
+        self.print_current_effects_menu()
+        callbacks = None
+        while callbacks is None:
+            effect_input = input(
+                f"Select a number or comma-separated numbers to remove effects: ")
+            try:
+                callbacks = filter(lambda y: y is not None,
+                                   [callback_map.get(x) for x in effect_input.split(',')])
+            except Exception:
+                print("Try again")
+
+        success = True
+        for callback in callbacks:
+            success = callback() and success
+        return success
+
     def take_turn(self, index):
         self.acted.append(self.ordered.pop(index))
         return True
@@ -338,6 +368,21 @@ class EncounterPlayer:
         combatant.add_effect(Effect(effect_name, effect_turns))
         return True
 
+    def print_current_effects_menu(self):
+        i = 1
+        for combatant in self.encounter.combatants:
+            if len(combatant.effects) > 0:
+                print(combatant.name)
+                for effect in combatant.effects:
+                    print(f"{i}. {effect}")
+                    i += 1
+
+    @staticmethod
+    def remove_effect(combatant_and_effect_name):
+        combatant, effect_name = combatant_and_effect_name
+        combatant.remove_effect(effect_name)
+        return True
+
     def tick_effects(self):
         for combatant in self.encounter.combatants:
             combatant.effects = {name: effect for (name, effect) in combatant.effects.items() if effect.tick()}
@@ -353,6 +398,9 @@ class Combatant:
 
     def add_effect(self, effect):
         self.effects[effect.name] = effect
+
+    def remove_effect(self, effect_name):
+        self.effects = {name: effect for (name, effect) in self.effects.items() if name != effect_name}
 
     def __str__(self):
         s = f"{self.name} ({self.hit_points[0]}/{self.hit_points[1]})"
