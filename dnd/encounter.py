@@ -299,25 +299,6 @@ class Combatant:
         return s
 
 
-class OptionSwitcher:
-
-    def __init__(self, num_options, action, base_cases=None):
-        if base_cases is None:
-            base_cases = dict()
-        self.action = action
-        self.cases = self.create_cases(num_options)
-        self.cases = {**self.cases, **base_cases}
-
-    def create_cases(self, num_options):
-        cases = {}
-        for i in range(num_options):
-            cases[str(i + 1)] = partial(self.action, i)
-        return cases
-
-    def get(self, case):
-        return self.cases.get(case, None)
-
-
 class CallbackMap:
     def __init__(self, options, action, base_cases=None, **kwargs):
         if base_cases is None:
